@@ -29,17 +29,17 @@ def _discover_artifacts_for_tag(tag):
     Search artifacts/ and runs/ for files related to tag.
     Returns (history_path_or_None, model_path_or_None, tb_logdir_or_None)
     """
-    # search artifacts for history_{tag}_*.pkl or .csv
+    
     history_candidates = glob.glob(os.path.join("artifacts", f"history_{tag}_*.*"))
     model_candidates = glob.glob(os.path.join("artifacts", f"model_{tag}_*.*"))
     history_path = history_candidates[0] if history_candidates else None
     model_path = model_candidates[0] if model_candidates else None
 
-    # tb runs directory
+    
     tb_dir = os.path.join("runs", tag)
     tb_logdir = tb_dir if os.path.isdir(tb_dir) else None
 
-    # fallback: if tag is like "exp_2025...", try to match prefix
+    
     if history_path is None:
         hist_prefix = os.path.join("artifacts", f"history_{tag.split('_')[0]}*")
         more = glob.glob(hist_prefix)
@@ -56,7 +56,7 @@ def run_and_record(config, X_train, y_train, X_val, y_val, device='cpu', verbose
     Wrapper: run run_experiment, then write an experiments_log.csv row.
     This version will discover artifact files on disk if run_experiment did not return them.
     """
-    # ensure tag
+    
     if 'tag' not in config or not config['tag']:
         config['tag'] = f"exp_{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}"
     tag = config['tag']
@@ -67,7 +67,7 @@ def run_and_record(config, X_train, y_train, X_val, y_val, device='cpu', verbose
     try:
         model, results = run_experiment(X_train, y_train, X_val, y_val, config, device=device, verbose=verbose)
     except Exception as e:
-        # capture traceback but continue to write a CSV row
+        
         error_str = traceback.format_exc()
         if verbose:
             print("run_experiment error:", error_str)
@@ -76,14 +76,14 @@ def run_and_record(config, X_train, y_train, X_val, y_val, device='cpu', verbose
 
     duration = time.time() - t0
 
-    # extract metrics and artifact paths from results if present
+    
     best_val_mse = results.get('best_val_mse', float('nan'))
     history_df = results.get('history', pd.DataFrame()) if results else pd.DataFrame()
     final_train_loss = float(history_df['train_loss'].iloc[-1]) if (not history_df.empty and 'train_loss' in history_df.columns) else float('nan')
     final_val_mse = float(history_df['val_mse'].iloc[-1]) if (not history_df.empty and 'val_mse' in history_df.columns) else float('nan')
     final_val_rmse = float(history_df['val_rmse'].iloc[-1]) if (not history_df.empty and 'val_rmse' in history_df.columns) else float('nan')
 
-    # artifact paths from results, or discovered on disk if missing
+    
     history_path = results.get('history_path') if isinstance(results, dict) else None
     model_path = results.get('model_path') if isinstance(results, dict) else None
     tb_logdir = results.get('tb_logdir') if isinstance(results, dict) else None
@@ -110,7 +110,7 @@ def run_and_record(config, X_train, y_train, X_val, y_val, device='cpu', verbose
         "error": error_str
     }
 
-    # append to CSV
+    
     try:
         if not os.path.exists(CSV_PATH):
             pd.DataFrame([row]).to_csv(CSV_PATH, index=False)
